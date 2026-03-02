@@ -20,16 +20,16 @@ __device__ void public_key_to_hash160(const uint256 x, const uint256 y, uint8_t*
 
 // Kernel utama
 __global__ void generate_kernel(
-    uint64_t start_hi, uint64_t start_lo,
-    uint64_t end_hi, uint64_t end_lo,
+    unsigned long long start_hi, unsigned long long start_lo,
+    unsigned long long end_hi, unsigned long long end_lo,
     Result* results, int batch_size,
-    uint64_t* counter) {
+    unsigned long long* counter) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= batch_size) return;
 
-    uint64_t priv_hi, priv_lo;
-    uint64_t old_hi, old_lo, new_hi, new_lo;
+    unsigned long long priv_hi, priv_lo;
+    unsigned long long old_hi, old_lo, new_hi, new_lo;
     do {
         old_hi = counter[0];
         old_lo = counter[1];
@@ -65,10 +65,10 @@ __global__ void generate_kernel(
 }
 
 extern "C" void run_gpu_kernel(
-    uint64_t start_hi, uint64_t start_lo,
-    uint64_t end_hi, uint64_t end_lo,
+    unsigned long long start_hi, unsigned long long start_lo,
+    unsigned long long end_hi, unsigned long long end_lo,
     Result* d_results, int batch_size,
-    uint64_t* d_counter, cudaStream_t stream) {
+    unsigned long long* d_counter, cudaStream_t stream) {
     int threads = 256;
     int blocks = (batch_size + threads - 1) / threads;
     generate_kernel<<<blocks, threads, 0, stream>>>(
