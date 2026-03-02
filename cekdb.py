@@ -31,13 +31,13 @@ try:
     tables = cursor.fetchall()
     print(f"[INFO] Tabel yang ada di database: {[t[0] for t in tables]}")
     
-    if not any(t[0] == 'signatures' for t in tables):
-        print("[FATAL ERROR] Tabel 'signatures' tidak ditemukan di dalam database!")
+    if not any(t[0] == 'addresses' for t in tables):
+        print("[FATAL ERROR] Tabel 'addresses' tidak ditemukan di dalam database!")
         exit()
 
     # 3. Cek Nama Kolom (Struktur Asli)
     print("\n[PENTING] STRUKTUR KOLOM ASLI:")
-    cursor.execute("SELECT * FROM signatures LIMIT 1")
+    cursor.execute("SELECT * FROM addresses LIMIT 1")
     columns = [description[0] for description in cursor.description]
     print(columns)
     
@@ -52,7 +52,7 @@ try:
             if len(val_str) > 50: val_str = val_str[:50] + "..."
             print(f"  - {col}: {val_str}")
     else:
-        print("\n[WARNING] Tabel 'signatures' ditemukan tapi KOSONG (0 data).")
+        print("\n[WARNING] Tabel 'addresses' ditemukan tapi KOSONG (0 data).")
 
     conn.close()
 
@@ -61,3 +61,4 @@ except Exception as e:
 
 
 print("="*50)
+
