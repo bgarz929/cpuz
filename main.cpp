@@ -120,6 +120,7 @@ int main() {
     cudaStreamCreate(&stream);
 
     unsigned long long total_generated = 0;
+    bool first = true;
     while (true) {
         run_gpu_kernel(start_hi, start_lo, end_hi, end_lo, d_results, BATCH_SIZE, d_counter, stream);
         cudaStreamSynchronize(stream);
@@ -131,6 +132,20 @@ int main() {
             valid_count++;
         }
         if (valid_count == 0) break;
+
+        // Debug untuk private key pertama
+        if (first && valid_count > 0) {
+            first = false;
+            std::cout << "=== DEBUG: First private key ===" << std::endl;
+            std::cout << "Private key (hi, lo): 0x" << std::hex << h_results[0].priv_hi << ", 0x" << h_results[0].priv_lo << std::dec << std::endl;
+            std::cout << "Public key x (big-endian): ";
+            for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].x[3 - i]);
+            std::cout << std::endl;
+            std::cout << "Public key y (big-endian): ";
+            for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].y[3 - i]);
+            std::cout << std::endl;
+            std::cout << "================================" << std::endl;
+        }
 
         std::vector<Result> batch(h_results, h_results + valid_count);
         save_results(db, batch);
