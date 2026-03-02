@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cstring>          // untuk memcpy
 #include <cuda_runtime.h>
 #include <sqlite3.h>
 #include <vector>
@@ -40,7 +41,7 @@ std::string public_key_to_address(const uint64_t* x_le, const uint64_t* y_le) {
     uint8_t sha256_hash[SHA256_DIGEST_LENGTH];
     SHA256(pubkey, 33, sha256_hash);
 
-    // RIPEMD-160
+    // RIPEMD-160 (deprecated di OpenSSL 3.0, tetapi masih berfungsi)
     uint8_t ripe_hash[20];
     RIPEMD160(sha256_hash, SHA256_DIGEST_LENGTH, ripe_hash);
 
