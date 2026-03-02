@@ -8,9 +8,9 @@ typedef uint64_t uint256[4];
 
 // Struktur untuk hasil dari GPU
 struct Result {
-    uint64_t priv_hi;      // 64-bit atas private key (hanya 7 bit efektif)
-    uint64_t priv_lo;      // 64-bit bawah
-    uint8_t hash160[20];   // RIPEMD-160 hash dari public key
+    unsigned long long priv_hi;   // 64-bit atas private key
+    unsigned long long priv_lo;   // 64-bit bawah
+    uint8_t hash160[20];          // RIPEMD-160 hash dari public key
 };
 
 // Konstanta kurva secp256k1
