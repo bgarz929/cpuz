@@ -1,6 +1,20 @@
 #include "types.h"
 #include <cuda_runtime.h>
 
+// Konstanta kurva secp256k1 dalam memori konstan GPU
+__constant__ uint256 P = {
+    0xFFFFFFFEFFFFFC2FULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
+};
+__constant__ uint256 N = {
+    0x14551231950B75FCULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
+};
+__constant__ uint256 GX = {
+    0x79BE667EF9DCBBACULL, 0x55A06295CE870B07ULL, 0x29BFCDB2DCE28D95ULL, 0x483ADA7726A3C465ULL
+};
+__constant__ uint256 GY = {
+    0x483ADA7726A3C465ULL, 0x29BFCDB2DCE28D95ULL, 0x55A06295CE870B07ULL, 0x79BE667EF9DCBBACULL
+};
+
 // Fungsi pembantu aritmetika 256-bit
 __device__ int cmp256(const uint256 a, const uint256 b) {
     for (int i = 3; i >= 0; i--) {
