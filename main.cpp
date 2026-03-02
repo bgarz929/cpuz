@@ -4,14 +4,61 @@
 #include <cuda_runtime.h>
 #include <sqlite3.h>
 #include <vector>
+#include <openssl/sha.h>
+#include <openssl/ripemd.h>
 #include "types.h"
-#include "base58.cpp"  // pastikan base58.cpp sudah berisi fungsi hash160_to_address
+#include "base58.cpp"
 
 extern "C" void run_gpu_kernel(
     unsigned long long start_hi, unsigned long long start_lo,
     unsigned long long end_hi, unsigned long long end_lo,
     Result* d_results, int batch_size,
     unsigned long long* d_counter, cudaStream_t stream);
+
+// Konversi uint256 little-endian ke big-endian 32-byte
+void uint256_to_be(const uint64_t* le, uint8_t* be) {
+    for (int i = 0; i < 4; i++) {
+        uint64_t val = le[3 - i]; // ambil dari MSB
+        for (int j = 0; j < 8; j++) {
+            be[i*8 + j] = (val >> (56 - 8*j)) & 0xff;
+        }
+    }
+}
+
+// Menghasilkan alamat Bitcoin dari public key (x,y) dalam little-endian
+std::string public_key_to_address(const uint64_t* x_le, const uint64_t* y_le) {
+    uint8_t x_be[32], y_be[32];
+    uint256_to_be(x_le, x_be);
+    uint256_to_be(y_le, y_be);
+
+    // Compressed public key
+    uint8_t pubkey[33];
+    pubkey[0] = (y_le[0] & 1) ? 0x03 : 0x02; // bit terendah y (LSB) menentukan ganjil/genap
+    memcpy(pubkey + 1, x_be, 32);
+
+    // SHA-256
+    uint8_t sha256_hash[SHA256_DIGEST_LENGTH];
+    SHA256(pubkey, 33, sha256_hash);
+
+    // RIPEMD-160
+    uint8_t ripe_hash[20];
+    RIPEMD160(sha256_hash, SHA256_DIGEST_LENGTH, ripe_hash);
+
+    // Tambahkan versi byte (0x00 untuk mainnet)
+    uint8_t address_with_checksum[25];
+    address_with_checksum[0] = 0x00;
+    memcpy(address_with_checksum + 1, ripe_hash, 20);
+
+    // Double SHA-256 untuk checksum
+    uint8_t hash1[SHA256_DIGEST_LENGTH];
+    uint8_t hash2[SHA256_DIGEST_LENGTH];
+    SHA256(address_with_checksum, 21, hash1);
+    SHA256(hash1, SHA256_DIGEST_LENGTH, hash2);
+    memcpy(address_with_checksum + 21, hash2, 4);
+
+    // Base58 encoding
+    return base58_encode(address_with_checksum, 25);
+}
 
 sqlite3* init_db(const char* dbname) {
     sqlite3* db;
@@ -40,7 +87,7 @@ void save_results(sqlite3* db, const std::vector<Result>& results) {
         ss << std::hex << std::setfill('0')
            << std::setw(16) << res.priv_hi << std::setw(16) << res.priv_lo;
         std::string priv_hex = ss.str();
-        std::string addr = hash160_to_address(res.hash160);
+        std::string addr = public_key_to_address(res.x, res.y);
         std::string sql = "INSERT OR IGNORE INTO addresses (private_key_hex, address) VALUES ('" + priv_hex + "', '" + addr + "');";
         char* errMsg = nullptr;
         sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg);
