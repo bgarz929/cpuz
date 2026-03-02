@@ -27,15 +27,3 @@ std::string base58_encode(const uint8_t* data, size_t len) {
     }
     return result;
 }
-
-std::string hash160_to_address(const uint8_t* hash160) {
-    uint8_t data[25];
-    data[0] = 0x00;
-    for (int i = 0; i < 20; i++) data[1+i] = hash160[i];
-    uint8_t hash1[SHA256_DIGEST_LENGTH];
-    uint8_t hash2[SHA256_DIGEST_LENGTH];
-    SHA256(data, 21, hash1);
-    SHA256(hash1, SHA256_DIGEST_LENGTH, hash2);
-    for (int i = 0; i < 4; i++) data[21+i] = hash2[i];
-    return base58_encode(data, 25);
-}
