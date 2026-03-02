@@ -98,15 +98,17 @@ void save_results(sqlite3* db, const std::vector<Result>& results) {
 }
 
 int main() {
+    // Rentang pengujian: hanya private key 0x400000000000012C (hi=0x40, lo=0x12C)
+    // Untuk debug, kita set start dan end sama dengan private key tersebut
     unsigned long long start_hi = 0x40;
-    unsigned long long start_lo = 0x0;
-    unsigned long long end_hi = 0x7F;
-    unsigned long long end_lo = 0xFFFFFFFFFFFFFFFF;
+    unsigned long long start_lo = 0x12C;
+    unsigned long long end_hi = 0x40;
+    unsigned long long end_lo = 0x12C;
 
     sqlite3* db = init_db("btc_addresses.db");
     if (!db) return 1;
 
-    const int BATCH_SIZE = 100000;  // Sesuaikan dengan memori GPU
+    const int BATCH_SIZE = 1;  // hanya satu kunci
     Result* h_results = new Result[BATCH_SIZE];
     Result* d_results;
     cudaMalloc(&d_results, BATCH_SIZE * sizeof(Result));
@@ -119,41 +121,23 @@ int main() {
     cudaStream_t stream;
     cudaStreamCreate(&stream);
 
-    unsigned long long total_generated = 0;
-    bool first = true;
-    while (true) {
-        run_gpu_kernel(start_hi, start_lo, end_hi, end_lo, d_results, BATCH_SIZE, d_counter, stream);
-        cudaStreamSynchronize(stream);
-        cudaMemcpy(h_results, d_results, BATCH_SIZE * sizeof(Result), cudaMemcpyDeviceToHost);
+    // Jalankan kernel
+    run_gpu_kernel(start_hi, start_lo, end_hi, end_lo, d_results, BATCH_SIZE, d_counter, stream);
+    cudaStreamSynchronize(stream);
+    cudaMemcpy(h_results, d_results, BATCH_SIZE * sizeof(Result), cudaMemcpyDeviceToHost);
 
-        int valid_count = 0;
-        for (int i = 0; i < BATCH_SIZE; i++) {
-            if (h_results[i].priv_hi == 0 && h_results[i].priv_lo == 0) break;
-            valid_count++;
-        }
-        if (valid_count == 0) break;
+    // Tampilkan hasil
+    std::cout << "Private key (hi, lo): 0x" << std::hex << h_results[0].priv_hi << ", 0x" << h_results[0].priv_lo << std::dec << std::endl;
+    std::cout << "Public key x (big-endian): ";
+    for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].x[3 - i]);
+    std::cout << std::endl;
+    std::cout << "Public key y (big-endian): ";
+    for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].y[3 - i]);
+    std::cout << std::endl;
 
-        // Debug untuk private key pertama
-        if (first && valid_count > 0) {
-            first = false;
-            std::cout << "=== DEBUG: First private key ===" << std::endl;
-            std::cout << "Private key (hi, lo): 0x" << std::hex << h_results[0].priv_hi << ", 0x" << h_results[0].priv_lo << std::dec << std::endl;
-            std::cout << "Public key x (big-endian): ";
-            for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].x[3 - i]);
-            std::cout << std::endl;
-            std::cout << "Public key y (big-endian): ";
-            for (int i = 0; i < 4; i++) printf("%016llx", h_results[0].y[3 - i]);
-            std::cout << std::endl;
-            std::cout << "================================" << std::endl;
-        }
-
-        std::vector<Result> batch(h_results, h_results + valid_count);
-        save_results(db, batch);
-        total_generated += valid_count;
-        std::cout << "Generated " << total_generated << " addresses so far..." << std::endl;
-
-        if (valid_count < BATCH_SIZE) break;  // Rentang selesai
-    }
+    // Simpan ke database
+    std::vector<Result> batch(h_results, h_results + 1);
+    save_results(db, batch);
 
     cudaFree(d_results);
     cudaFree(d_counter);
@@ -161,6 +145,6 @@ int main() {
     sqlite3_close(db);
     delete[] h_results;
 
-    std::cout << "Done. Total addresses generated: " << total_generated << std::endl;
+    std::cout << "Done. Check database." << std::endl;
     return 0;
 }
