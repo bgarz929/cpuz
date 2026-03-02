@@ -1,25 +1,27 @@
 #include "types.h"
 #include <cuda_runtime.h>
 
-// Konstanta kurva secp256k1 dalam memori konstan GPU
+// Konstanta kurva secp256k1 dalam memori konstan GPU (little-endian)
+// p = 2^256 - 2^32 - 977
 __constant__ uint256 P = {
     0xFFFFFFFEFFFFFC2FULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
 };
+// n = order of G
 __constant__ uint256 N = {
     0x14551231950B75FCULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL
 };
-// Base point G dalam little-endian (indeks 0 = LSB)
+// Base point G (little-endian: index 0 = LSB)
 __constant__ uint256 GX = {
-    0x59F2815B16F81798ULL,  // LSB
+    0x59F2815B16F81798ULL,
     0x029BFCDB2DCE28D9ULL,
     0x55A06295CE870B07ULL,
-    0x79BE667EF9DCBBACULL   // MSB
+    0x79BE667EF9DCBBACULL
 };
 __constant__ uint256 GY = {
-    0x9C47D08FFB10D4B8ULL,  // LSB
+    0x9C47D08FFB10D4B8ULL,
     0xFD17B448A6855419ULL,
     0x5DA4FBFC0E1108A8ULL,
-    0x483ADA7726A3C465ULL   // MSB
+    0x483ADA7726A3C465ULL
 };
 
 // Fungsi pembantu aritmetika 256-bit
