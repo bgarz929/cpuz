@@ -93,25 +93,24 @@ __device__ void mod_sub(const uint256 a, const uint256 b, uint256 r) {
     }
 }
 
-// Perkalian 256-bit (hasil 512-bit) kemudian reduksi mod p (sederhana)
+// Perkalian 256-bit (hasil 512-bit) kemudian reduksi mod p
 __device__ void mod_mul(const uint256 a, const uint256 b, uint256 r) {
     uint64_t t[8] = {0};
     for (int i = 0; i < 4; i++) {
         uint64_t carry = 0;
         for (int j = 0; j < 4; j++) {
-            uint64_t hi, lo;
-            asm("mul %2, %3;" : "=d"(hi), "=a"(lo) : "r"(a[i]), "r"(b[j]));
-            uint64_t sum = lo + t[i+j] + carry;
-            carry = (sum < lo) ? 1 : 0;
+            uint64_t prod_lo = a[i] * b[j]; // low 64-bit
+            uint64_t prod_hi = __umul64hi(a[i], b[j]); // high 64-bit
+            uint64_t sum = prod_lo + t[i+j] + carry;
+            carry = (sum < prod_lo) ? 1 : 0;
             t[i+j] = sum;
-            sum = hi + t[i+j+1] + carry;
-            carry = (sum < hi) ? 1 : 0;
+            sum = prod_hi + t[i+j+1] + carry;
+            carry = (sum < prod_hi) ? 1 : 0;
             t[i+j+1] = sum;
         }
     }
     // Reduksi mod p (sederhana: ambil 4 kata terendah, lalu kurangi jika perlu)
     for (int i = 0; i < 4; i++) r[i] = t[i];
-    // Kurangi jika r >= p
     if (cmp256(r, P) >= 0) {
         uint64_t borrow = 0;
         for (int i = 0; i < 4; i++) {
@@ -238,7 +237,7 @@ __device__ void point_add_affine(const Jacobian& p, const Jacobian& q, Jacobian&
 }
 
 // Perkalian skalar: Q = k * G dengan k 128-bit (priv_hi, priv_lo)
-__device__ void scalar_mult(uint64_t k_hi, uint64_t k_lo, Jacobian& Q) {
+__device__ void scalar_mult(unsigned long long k_hi, unsigned long long k_lo, Jacobian& Q) {
     Q.x[0]=Q.x[1]=Q.x[2]=Q.x[3]=0;
     Q.y[0]=Q.y[1]=Q.y[2]=Q.y[3]=0;
     Q.z[0]=Q.z[1]=Q.z[2]=Q.z[3]=0;
@@ -250,7 +249,7 @@ __device__ void scalar_mult(uint64_t k_hi, uint64_t k_lo, Jacobian& Q) {
     }
     for (int bit = 127; bit >= 0; bit--) {
         point_double(Q, Q);
-        uint64_t w = (bit >= 64) ? k_hi : k_lo;
+        unsigned long long w = (bit >= 64) ? k_hi : k_lo;
         int b = (w >> (bit & 63)) & 1;
         if (b) {
             point_add_affine(Q, G, Q);
