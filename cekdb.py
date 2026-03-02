@@ -2,7 +2,7 @@ import sqlite3
 import os
 
 # Nama file database
-DB_NAME = "valid_nonce_reuse.db"
+DB_NAME = "btc_addresses.db"
 
 print("="*50)
 print("DIAGNOSA DATABASE BITCOIN")
@@ -14,7 +14,7 @@ print(f"[INFO] Lokasi Script: {os.getcwd()}")
 print(f"[INFO] Mencari Database di: {path}")
 
 if not os.path.exists(DB_NAME):
-    print("\n[FATAL ERROR] File 'valid_nonce_reuse.db' TIDAK DITEMUKAN!")
+    print("\n[FATAL ERROR] File 'btc_addresses.db' TIDAK DITEMUKAN!")
     print("Pastikan file database ada di folder yang sama dengan script ini.")
     exit()
 else:
@@ -58,5 +58,6 @@ try:
 
 except Exception as e:
     print(f"\n[ERROR] Terjadi kesalahan saat membaca database:\n{e}")
+
 
 print("="*50)
