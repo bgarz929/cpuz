@@ -1,22 +1,6 @@
 #include "types.h"
 #include "secp256k1.cu"
-#include "sha256.cu"
-#include "ripemd160.cu"
 #include <cuda_runtime.h>
-
-// Fungsi untuk menghasilkan hash160 dari public key (x,y) dalam bentuk affine
-__device__ void public_key_to_hash160(const uint256 x, const uint256 y, uint8_t* hash160) {
-    uint8_t pubkey[33];
-    pubkey[0] = (y[0] & 1) ? 0x03 : 0x02;
-    for (int i = 0; i < 32; i++) {
-        int word = 3 - i/8;
-        int shift = 56 - 8*(i%8);
-        pubkey[1 + i] = (x[word] >> shift) & 0xff;
-    }
-    uint8_t sha256_hash[32];
-    sha256(pubkey, 33, sha256_hash);
-    ripemd160(sha256_hash, 32, hash160);
-}
 
 // Kernel utama
 __global__ void generate_kernel(
@@ -59,9 +43,13 @@ __global__ void generate_kernel(
     mod_mul(z_inv2, z_inv, z_inv2);
     mod_mul(Q.y, z_inv2, y);
 
-    public_key_to_hash160(x, y, results[idx].hash160);
+    // Simpan private key dan public key
     results[idx].priv_hi = priv_hi;
     results[idx].priv_lo = priv_lo;
+    for (int i = 0; i < 4; i++) {
+        results[idx].x[i] = x[i];
+        results[idx].y[i] = y[i];
+    }
 }
 
 extern "C" void run_gpu_kernel(
